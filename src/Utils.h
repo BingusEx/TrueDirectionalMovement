@@ -16,6 +16,15 @@ struct AngleZX
 	double distance;
 };
 
+struct SoftPotential
+{
+	float k;
+	float n;
+	float s;
+	float o;
+	float a;
+};
+
 void GetAngle(const RE::NiPoint3& a_from, const RE::NiPoint3& a_to, AngleZX& angle);
 bool GetAngle(RE::TESObjectREFR* a_target, AngleZX& angle);
 RE::NiPoint3 GetCameraPos();
@@ -58,7 +67,6 @@ bool PredictAimProjectile(RE::NiPoint3 a_projectilePos, RE::NiPoint3 a_targetPos
 {
 	return a_radian * 57.295779513f;
 }
-
 
 [[nodiscard]] inline bool ApproximatelyEqual(float A, float B)
 {
@@ -265,6 +273,27 @@ bool PredictAimProjectile(RE::NiPoint3 a_projectilePos, RE::NiPoint3 a_targetPos
 	return percent;
 }
 
+//TODO All of this should really be an API call into th gts dll..
+
+[[nodiscard]] RE::hkVector4 GetBoneQuad(const RE::Actor* a_actor, const char* a_boneStr, bool a_invert, bool a_worldtranslate);
+
+[[nodiscard]] RE::NiAVObject* FindBoneNode(const RE::Actor* a_actorptr, std::string_view a_nodeName, bool a_isFirstPerson);
+
+[[nodiscard]] inline float soft_power(const float x, const float k, const float n, const float s, const float o, const float a)
+{
+	return pow(1.0f + pow(k * (x), n * s), 1.0f / s) / pow(1.0f + pow(k * o, n * s), 1.0f / s) + a;
+}
+
+[[nodiscard]] inline float soft_core(const float x, const float k, const float n, const float s, const float o, const float a)
+{
+	return 1.0f / soft_power(x, k, n, s, o, 0.0) + a;
+}
+
+[[nodiscard]] inline float soft_core(const float x, const SoftPotential& soft_potential)
+{
+	return soft_core(x, soft_potential.k, soft_potential.n, soft_potential.s, soft_potential.o, soft_potential.a);
+}
+
 [[nodiscard]] inline RE::NiPoint3 GetNiPoint3(RE::hkVector4 a_hkVector4)
 {
 	float quad[4];
@@ -275,4 +304,79 @@ bool PredictAimProjectile(RE::NiPoint3 a_projectilePos, RE::NiPoint3 a_targetPos
 [[nodiscard]] inline float Remap(const float a_oldValue, const float a_oldMin, const float a_oldMax, const float a_newMin, const float a_newMax)
 {
 	return (((a_oldValue - a_oldMin) * (a_newMax - a_newMin)) / (a_oldMax - a_oldMin)) + a_newMin;
+}
+
+[[nodiscard]] inline float GetRefScale(RE::Actor* actor)
+{
+	// This function reports same values as GetScale() in the console, so it is a value from SetScale() command
+	return static_cast<float>(actor->GetReferenceRuntimeData().refScale) / 100.0F;
+}
+
+[[nodiscard]] inline float GetModelScale(const RE::Actor* a_actor)
+{
+	if (!a_actor->Is3DLoaded()) {
+		return 1.0;
+	}
+
+	if (const auto model = a_actor->Get3D(false)) {
+		return model->local.scale;
+	}
+
+	if (const auto first_model = a_actor->Get3D(true)) {
+		return first_model->local.scale;
+	}
+
+	return 1.0;
+}
+
+[[nodiscard]] inline float GetNodeScale(const RE::Actor* a_actor, const std::string_view a_boneName)
+{
+	if (const auto Node = FindBoneNode(a_actor, a_boneName, false)) {
+		return Node->local.scale;
+	}
+	if (const auto FPNode = FindBoneNode(a_actor, a_boneName, true)) {
+		return FPNode->local.scale;
+	}
+	return -1.0;
+}
+
+[[nodiscard]] inline RE::hkVector4 NiPointToHkVector(const RE::NiPoint3& a_point, bool a_convertScale = false)
+{
+	RE::hkVector4 ret = { a_point.x, a_point.y, a_point.z, 0 };
+	if (a_convertScale) {
+		ret = ret * *g_worldScale;
+		logger::trace("(NiPointToHKVector) Worldscale: {} Resulting Output: X:{}, Y:{}, Z:{},", *g_worldScale, ret.quad.m128_f32[0], ret.quad.m128_f32[1], ret.quad.m128_f32[2]);
+	}
+	return ret;
+}
+
+[[nodiscard]] inline float GetScale(const RE::Actor* a_actor)
+{
+	float TargetScale = 1.f;
+	TargetScale *= GetModelScale(a_actor);                    //Model scale, Scaling done by game
+	TargetScale *= GetNodeScale(a_actor, "NPC");              // NPC bone, Racemenu uses this.
+	TargetScale *= GetNodeScale(a_actor, "NPC Root [Root]");  //Child bone of "NPC" some other mods scale this bone instead
+
+	if (TargetScale < 0.15f)
+		TargetScale = 0.15f;
+	if (TargetScale > 250.f)
+		TargetScale = 250.f;
+	return TargetScale;
+}
+
+[[nodiscard]] inline float GetAnimationSlowdown(RE::Actor* a_actor)
+{
+	if (!a_actor)
+		return 1.0;
+
+	SoftPotential getspeed{
+		.k = 0.142f,  // 0.125
+		.n = 0.82f,   // 0.86
+		.s = 1.90f,   // 1.12
+		.o = 1.0f,
+		.a = 0.0f,  //Default is 0
+	};
+
+	return static_cast<float>(pow(soft_core(GetScale(a_actor), getspeed), 1.2));
+	//return static_cast<float>(soft_core(GetScale(a_actor), getspeed));
 }

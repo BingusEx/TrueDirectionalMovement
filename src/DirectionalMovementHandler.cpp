@@ -1065,7 +1065,7 @@ void DirectionalMovementHandler::UpdateRotation(bool bForceInstant /*= false */)
 		return;
 	}
 
-	float angleDelta = NormalRelativeAngle(_desiredAngle - playerCharacter->data.angle.z);
+	float angleDeltaPlayer = NormalRelativeAngle(_desiredAngle - playerCharacter->data.angle.z);
 
 	bool bInstantRotation = bForceInstant || (_bShouldFaceCrosshair && Settings::bFaceCrosshairInstantly) || (_bShouldFaceCrosshair && !_bCurrentlyTurningToCrosshair) || (_bJustDodged && !playerCharacter->IsAnimationDriven()) || (_bYawControlledByPlugin && _controlledYawRotationSpeedMultiplier <= 0.f);
 
@@ -1163,26 +1163,25 @@ void DirectionalMovementHandler::UpdateRotation(bool bForceInstant /*= false */)
 			rotationSpeedMult /= gtm;
 		}
 
-		float maxAngleDelta = rotationSpeedMult * playerDeltaTime;
+		float maxAngleDeltaPlayer = (rotationSpeedMult * GetAnimationSlowdown(playerCharacter)) * playerDeltaTime;
 		if (bRelativeSpeed) {
-			maxAngleDelta *= (1.f + abs(angleDelta));
+			maxAngleDeltaPlayer *= (1.f + abs(maxAngleDeltaPlayer));
 		}
-
-		angleDelta = ClipAngle(angleDelta, -maxAngleDelta, maxAngleDelta);
+		angleDeltaPlayer = ClipAngle(angleDeltaPlayer, -maxAngleDeltaPlayer, maxAngleDeltaPlayer);
 	}
 
-	float aiProcessRotationSpeed = angleDelta * (1 / playerDeltaTime);
+	float aiProcessRotationSpeed = angleDeltaPlayer * (1 / playerDeltaTime);
 	SetDesiredAIProcessRotationSpeed(aiProcessRotationSpeed);
 	
-	playerCharacter->SetRotationZ(playerCharacter->data.angle.z + angleDelta);
+	playerCharacter->SetRotationZ(playerCharacter->data.angle.z + angleDeltaPlayer);
 
-	thirdPersonState->freeRotation.x = NormalRelativeAngle(thirdPersonState->freeRotation.x - angleDelta);
+	thirdPersonState->freeRotation.x = NormalRelativeAngle(thirdPersonState->freeRotation.x - angleDeltaPlayer);
 
 	if (_bIsTweening) {
-		_yawDelta += angleDelta;
+		_yawDelta += angleDeltaPlayer;
 	}
 
-	if (angleDelta * angleDelta < FLT_EPSILON) {
+	if (angleDeltaPlayer * angleDeltaPlayer < FLT_EPSILON) {
 		ResetDesiredAngle();
 	}
 }
@@ -2622,9 +2621,16 @@ void DirectionalMovementHandler::RefreshCameraHeadtrackTimer()
 void DirectionalMovementHandler::UpdateAIProcessRotationSpeed(RE::Actor* a_actor)
 {
 	if (a_actor) {
+		//logger::trace("Updating AI Process For: {} {}", a_actor->formID, a_actor->GetName());
 		auto currentProcess = a_actor->GetActorRuntimeData().currentProcess;
 		if (currentProcess && currentProcess->middleHigh) {
 			currentProcess->middleHigh->rotationSpeed.z = _desiredAIProcessRotationSpeed;
+			logger::trace("Updating Player AI ProcessMidHigh For: {} {} Speed {}", a_actor->formID, a_actor->GetName(), currentProcess->middleHigh->rotationSpeed.z);
+		}
+		if (currentProcess && currentProcess->high) {
+			currentProcess->high->pathingDesiredRotationSpeed.z = _desiredAIProcessRotationSpeed;
+			currentProcess->high->pathingCurrentRotationSpeed.z = _desiredAIProcessRotationSpeed;
+			logger::trace("Updating Player AI ProcessHigh For: {} {} Desired Speed {} Current {}", a_actor->formID, a_actor->GetName(), currentProcess->high->pathingDesiredRotationSpeed.z, currentProcess->high->pathingCurrentRotationSpeed.z);
 		}
 	}
 	SetDesiredAIProcessRotationSpeed(0.f);

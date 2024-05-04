@@ -314,6 +314,8 @@ bool PredictAimProjectile(RE::NiPoint3 a_projectilePos, RE::NiPoint3 a_targetPos
 
 [[nodiscard]] inline float GetModelScale(const RE::Actor* a_actor)
 {
+	if (!a_actor) return 1.0;
+
 	if (!a_actor->Is3DLoaded()) {
 		return 1.0;
 	}
@@ -331,13 +333,15 @@ bool PredictAimProjectile(RE::NiPoint3 a_projectilePos, RE::NiPoint3 a_targetPos
 
 [[nodiscard]] inline float GetNodeScale(const RE::Actor* a_actor, const std::string_view a_boneName)
 {
+	if (!a_actor) return 1.0f;
+
 	if (const auto Node = FindBoneNode(a_actor, a_boneName, false)) {
 		return Node->local.scale;
 	}
 	if (const auto FPNode = FindBoneNode(a_actor, a_boneName, true)) {
 		return FPNode->local.scale;
 	}
-	return -1.0;
+	return 1.0;
 }
 
 [[nodiscard]] inline RE::hkVector4 NiPointToHkVector(const RE::NiPoint3& a_point, bool a_convertScale = false)
@@ -352,6 +356,9 @@ bool PredictAimProjectile(RE::NiPoint3 a_projectilePos, RE::NiPoint3 a_targetPos
 
 [[nodiscard]] inline float GetScale(const RE::Actor* a_actor)
 {
+
+	if (!a_actor) return 1.f;
+
 	float TargetScale = 1.f;
 	TargetScale *= GetModelScale(a_actor);                    //Model scale, Scaling done by game
 	TargetScale *= GetNodeScale(a_actor, "NPC");              // NPC bone, Racemenu uses this.

@@ -240,7 +240,7 @@ namespace Hooks
 			return;
 		}
 
-		a_this->ProcessRawInput(a_rawX, a_rawY, a_outX, a_outY);
+		a_this->NormalizeThumbstickValue(a_rawX, a_rawY, a_outX, a_outY);
 
 		RE::NiPoint2 normalizedInputDirection{ a_outX, a_outY };
 		float inputLength = normalizedInputDirection.Unitize();

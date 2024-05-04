@@ -978,7 +978,7 @@ bool DirectionalMovementHandler::ProcessInput(RE::NiPoint2& a_inputDirection, RE
 		}
 	}
 
-	bool bShouldStop = Settings::bStopOnDirectionChange && RE::BSTimer::GetCurrentGlobalTimeMult() == 1;
+	bool bShouldStop = Settings::bStopOnDirectionChange && RE::BSTimer::QGlobalTimeMultiplier() == 1;
 
 	a_playerControlsData->prevMoveVec = a_playerControlsData->moveInputVec;
 	a_playerControlsData->moveInputVec.x = 0.f;
@@ -1159,7 +1159,7 @@ void DirectionalMovementHandler::UpdateRotation(bool bForceInstant /*= false */)
 
 		// multiply rotation speed by the inverse of slow time multiplier to effectively ignore it
 		if (Settings::bIgnoreSlowTime) {
-			float gtm = RE::BSTimer::GetCurrentGlobalTimeMult();
+			float gtm = RE::BSTimer::QGlobalTimeMultiplier();
 			rotationSpeedMult /= gtm;
 		}
 

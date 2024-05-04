@@ -384,6 +384,6 @@ bool PredictAimProjectile(RE::NiPoint3 a_projectilePos, RE::NiPoint3 a_targetPos
 		.a = 0.0f,  //Default is 0
 	};
 
-	return static_cast<float>(pow(soft_core(GetScale(a_actor), getspeed), 1.2));
+	return static_cast<float>(pow(soft_core(GetScale(a_actor), getspeed), 1.5));
 	//return static_cast<float>(soft_core(GetScale(a_actor), getspeed));
 }

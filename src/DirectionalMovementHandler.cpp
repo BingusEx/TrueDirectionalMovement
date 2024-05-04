@@ -1065,6 +1065,7 @@ void DirectionalMovementHandler::UpdateRotation(bool bForceInstant /*= false */)
 		return;
 	}
 
+	float angleDelta = NormalRelativeAngle(_desiredAngle - playerCharacter->data.angle.z);
 	float angleDeltaPlayer = NormalRelativeAngle(_desiredAngle - playerCharacter->data.angle.z);
 
 	bool bInstantRotation = bForceInstant || (_bShouldFaceCrosshair && Settings::bFaceCrosshairInstantly) || (_bShouldFaceCrosshair && !_bCurrentlyTurningToCrosshair) || (_bJustDodged && !playerCharacter->IsAnimationDriven()) || (_bYawControlledByPlugin && _controlledYawRotationSpeedMultiplier <= 0.f);
@@ -1084,9 +1085,11 @@ void DirectionalMovementHandler::UpdateRotation(bool bForceInstant /*= false */)
 
 		if (playerActorState->IsSwimming()) {
 			rotationSpeedMult *= Settings::fSwimmingRotationSpeedMult;
-		} else if (_bYawControlledByPlugin) {
+		}
+		else if (_bYawControlledByPlugin) {
 			rotationSpeedMult *= _controlledYawRotationSpeedMultiplier;
-		} else {
+		}
+		else {
 			// Get the current movement type
 			RE::BSTSmartPointer<RE::BSAnimationGraphManager> animationGraphManagerPtr;
 			playerCharacter->GetAnimationGraphManager(animationGraphManagerPtr);
@@ -1096,8 +1099,8 @@ void DirectionalMovementHandler::UpdateRotation(bool bForceInstant /*= false */)
 
 			if (animationGraphManagerPtr) {
 				auto& graphManagerRuntimeData = animationGraphManagerPtr->GetRuntimeData();
-				auto activeGraph = graphManagerRuntimeData.activeGraph;				
-				
+				auto activeGraph = graphManagerRuntimeData.activeGraph;
+
 				RE::BShkbAnimationGraph* animationGraph = animationGraphManagerPtr->graphs[activeGraph].get();
 				BShkbAnimationGraph_GetCurrentMovementTypeName(animationGraph, &string);
 
@@ -1144,35 +1147,41 @@ void DirectionalMovementHandler::UpdateRotation(bool bForceInstant /*= false */)
 				rotationSpeedMult *= Settings::fRunningRotationSpeedMult;
 			}
 
-			
-
 			// multiply it by water speed mult
 			float submergeLevel = TESObjectREFR_GetSubmergeLevel(playerCharacter, playerCharacter->data.location.z, playerCharacter->parentCell);
 			if (submergeLevel > 0.18f) {
 				rotationSpeedMult *= 0.69f - submergeLevel + ((0.31f + submergeLevel) * Settings::fWaterRotationSpeedMult);
 			}
 		}
-		
+
 		if (rotationSpeedMult <= 0.f) {
 			return;
 		}
 
 		// multiply rotation speed by the inverse of slow time multiplier to effectively ignore it
 		if (Settings::bIgnoreSlowTime) {
-			float gtm = RE::BSTimer::QGlobalTimeMultiplier();
+			float gtm = RE::BSTimer::GetSingleton()->QGlobalTimeMultiplier();
 			rotationSpeedMult /= gtm;
 		}
 
 		float maxAngleDeltaPlayer = (rotationSpeedMult * GetAnimationSlowdown(playerCharacter)) * playerDeltaTime;
+
+		float maxAngleDelta = rotationSpeedMult * playerDeltaTime;
 		if (bRelativeSpeed) {
-			maxAngleDeltaPlayer *= (1.f + abs(maxAngleDeltaPlayer));
+			maxAngleDelta *= (1.f + abs(angleDelta));
 		}
-		angleDeltaPlayer = ClipAngle(angleDeltaPlayer, -maxAngleDeltaPlayer, maxAngleDeltaPlayer);
+
+		if (bRelativeSpeed) {
+			maxAngleDeltaPlayer *= (1.f + abs(angleDelta));
+		}
+
+		angleDelta = ClipAngle(angleDelta, -maxAngleDelta, maxAngleDelta);
+		angleDeltaPlayer = ClipAngle(angleDelta, -maxAngleDeltaPlayer, maxAngleDeltaPlayer);
 	}
 
-	float aiProcessRotationSpeed = angleDeltaPlayer * (1 / playerDeltaTime);
+	float aiProcessRotationSpeed = angleDelta * (1 / playerDeltaTime);
 	SetDesiredAIProcessRotationSpeed(aiProcessRotationSpeed);
-	
+
 	playerCharacter->SetRotationZ(playerCharacter->data.angle.z + angleDeltaPlayer);
 
 	thirdPersonState->freeRotation.x = NormalRelativeAngle(thirdPersonState->freeRotation.x - angleDeltaPlayer);
@@ -2621,16 +2630,9 @@ void DirectionalMovementHandler::RefreshCameraHeadtrackTimer()
 void DirectionalMovementHandler::UpdateAIProcessRotationSpeed(RE::Actor* a_actor)
 {
 	if (a_actor) {
-		//logger::trace("Updating AI Process For: {} {}", a_actor->formID, a_actor->GetName());
 		auto currentProcess = a_actor->GetActorRuntimeData().currentProcess;
 		if (currentProcess && currentProcess->middleHigh) {
-			currentProcess->middleHigh->rotationSpeed.z = _desiredAIProcessRotationSpeed;
-			logger::trace("Updating Player AI ProcessMidHigh For: {} {} Speed {}", a_actor->formID, a_actor->GetName(), currentProcess->middleHigh->rotationSpeed.z);
-		}
-		if (currentProcess && currentProcess->high) {
-			currentProcess->high->pathingDesiredRotationSpeed.z = _desiredAIProcessRotationSpeed;
-			currentProcess->high->pathingCurrentRotationSpeed.z = _desiredAIProcessRotationSpeed;
-			logger::trace("Updating Player AI ProcessHigh For: {} {} Desired Speed {} Current {}", a_actor->formID, a_actor->GetName(), currentProcess->high->pathingDesiredRotationSpeed.z, currentProcess->high->pathingCurrentRotationSpeed.z);
+			currentProcess->middleHigh->rotationSpeed.z = _desiredAIProcessRotationSpeed * GetAnimationSlowdown(a_actor);
 		}
 	}
 	SetDesiredAIProcessRotationSpeed(0.f);

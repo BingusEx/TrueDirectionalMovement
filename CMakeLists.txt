@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(
-	TrueDirectionalMovement
-	VERSION 2.2.5
+	TrueDirectionalMovement_GTSMod
+	VERSION 2.2.8
 	LANGUAGES CXX
 )
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

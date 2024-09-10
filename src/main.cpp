@@ -66,7 +66,7 @@ namespace
 
 		spdlog::set_default_logger(std::move(log));
 		spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
-		logger::info("THIS IS A MODIFIED VERSION MADE FOR THE GIANTESS (GTS) MOD.\r\nDO NOT CONTACT ERSHIN IF YOU HAVE ISSUES WITH THIS VERSION");
+		logger::warn("THIS IS A MODIFIED VERSION MADE FOR THE GIANTESS (GTS) MOD.\r\nDO NOT CONTACT ERSHIN IF YOU HAVE ISSUES WITH THIS VERSION");
 	}
 }
 

@@ -39,25 +39,24 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 
 namespace
 {
-	void InitializeLog()
-	{
-#ifndef NDEBUG
+	void InitializeLog() {
+	#ifndef NDEBUG
 		auto sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
-#else
+	#else
 		auto path = logger::log_directory();
 		if (!path) {
 			util::report_and_fail("Failed to find standard logging directory"sv);
 		}
 
-		*path /= fmt::format("{}.log"sv, Plugin::NAME);
+		*path /= fmt::format("{}.log", Plugin::NAME);
 		auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
-#endif
+	#endif
 
-#ifndef NDEBUG
+	#ifndef NDEBUG
 		const auto level = spdlog::level::trace;
-#else
+	#else
 		const auto level = spdlog::level::info;
-#endif
+	#endif
 
 		auto log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
 		log->set_level(level);
@@ -65,46 +64,16 @@ namespace
 
 		spdlog::set_default_logger(std::move(log));
 		spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
+		logger::info("THIS IS A MODIFIED VERSION MADE FOR THE GIANTESS (GTS) MOD.\r\nDO NOT CONTACT ERSHIN IF YOU HAVE ISSUES WITH THIS VERSION");
 	}
 }
 
-extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
-{
-	a_info->infoVersion = SKSE::PluginInfo::kVersion;
-	a_info->name = Plugin::NAME.data();
-	a_info->version = Plugin::VERSION[0];
 
-	if (a_skse->IsEditor()) {
-		logger::critical("Loaded in editor, marking as incompatible"sv);
-		return false;
-	}
-
-	const auto ver = a_skse->RuntimeVersion();
-	if (ver < SKSE::RUNTIME_SSE_1_5_39) {
-		logger::critical(FMT_STRING("Unsupported runtime version {}"), ver.string());
-		return false;
-	}
-
-	return true;
-}
-
-extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
-	SKSE::PluginVersionData v;
-
-	v.PluginVersion(Plugin::VERSION);
-	v.PluginName(Plugin::NAME);
-	v.AuthorName("Ersh");
-	v.UsesAddressLibrary(true);
-	v.CompatibleVersions({ SKSE::RUNTIME_SSE_LATEST });
-	v.HasNoStructUse(true);
-
-	return v;
-}();
-
-extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
-{
+SKSEPluginLoad(const SKSE::LoadInterface* a_skse) {
 #ifndef NDEBUG
-	while (!IsDebuggerPresent()) { Sleep(100); }
+	while (!IsDebuggerPresent()) {
+		Sleep(100);
+	}
 #endif
 	REL::Module::reset();  // Clib-NG bug workaround
 
@@ -124,6 +93,14 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 
 	return true;
 }
+
+SKSEPluginInfo(
+	.Version = REL::Version{ 2, 2, 6, 0 },
+	.Name = "TrueDirectionalMovement",
+	.Author = "Ershin, Modified by BingusEx for the GTS Mod",
+	.StructCompatibility = SKSE::StructCompatibility::Independent,
+	.RuntimeCompatibility = SKSE::VersionIndependence::AddressLibrary
+);
 
 extern "C" DLLEXPORT void* SKSEAPI RequestPluginAPI(const TDM_API::InterfaceVersion a_interfaceVersion)
 {

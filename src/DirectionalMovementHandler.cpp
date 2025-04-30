@@ -1331,7 +1331,7 @@ bool DirectionalMovementHandler::IsPlayerAIDriven() const
 	}
 
 	auto& movementController = playerCharacter->GetActorRuntimeData().movementController;
-	if (movementController && !movementController->playerControls) {
+	if (movementController && movementController->GetAIDriven()) {
 		return true;
 	}
 
@@ -2521,7 +2521,7 @@ void DirectionalMovementHandler::UpdateAIProcessRotationSpeed(RE::Actor* a_actor
 	if (a_actor) {
 		auto currentProcess = a_actor->GetActorRuntimeData().currentProcess;
 		if (currentProcess && currentProcess->middleHigh) {
-			currentProcess->middleHigh->rotationSpeed.z = _desiredAIProcessRotationSpeed;
+			currentProcess->middleHigh->rotationSpeed.z = _desiredAIProcessRotationSpeed * GetAnimationSlowdown(a_actor);
 		}
 	}
 	SetDesiredAIProcessRotationSpeed(0.f);

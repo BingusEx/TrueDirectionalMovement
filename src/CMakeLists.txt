@@ -78,7 +78,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 			"/wd4200" # nonstandard extension used : zero-sized array in struct/union
 
 			"$<$<CONFIG:DEBUG>:/ZI>"
-			"$<$<CONFIG:RELEASE>:/Zi;/Zc:inline;/JMC-;/Ob3>"
+			"$<$<CONFIG:RELEASE>:/Zi;/Zc:inline;/JMC-;/Ob2>"
 	)
 
 	target_link_options(
@@ -88,6 +88,26 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 			"$<$<CONFIG:RELEASE>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF;/DEBUG:FULL>"
 	)
 endif()
+
+
+include(FetchContent)
+
+FetchContent_Declare(
+  simpleini
+  GIT_REPOSITORY https://github.com/brofield/simpleini.git
+  GIT_TAG        master
+  GIT_SHALLOW ON
+)
+
+FetchContent_Declare(
+    tomlplusplus
+    GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
+    GIT_TAG        v3.4.0
+	GIT_SHALLOW ON
+)
+
+FetchContent_MakeAvailable(simpleini)
+FetchContent_MakeAvailable(tomlplusplus)
 
 target_include_directories(
 	"${PROJECT_NAME}"
@@ -148,13 +168,12 @@ if(("${CommonLibSSEPath}" STREQUAL "CommonLibSSEPath-NOTFOUND") OR "${CommonLibS
 	add_subdirectory("$ENV{CommonLibSSEPath_NG}" CommonLibSSE EXCLUDE_FROM_ALL)
 endif()
 
-find_package(tomlplusplus REQUIRED CONFIG)
-
 target_link_libraries(
 	"${PROJECT_NAME}"
 	PRIVATE
-		tomlplusplus::tomlplusplus
-		CommonLibSSE::CommonLibSSE
+	tomlplusplus::tomlplusplus
+	CommonLibSSE::CommonLibSSE
+	SimpleIni::SimpleIni
 )
 
 target_precompile_headers(

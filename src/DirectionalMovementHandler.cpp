@@ -401,8 +401,7 @@ void DirectionalMovementHandler::UpdateFacingState()
 	}
 
 	bool bShouldFaceCrosshairWhileMoving =
-		!Is_Fake_Firstperson() &&
-		((playerActorState->GetWeaponState() == RE::WEAPON_STATE::kSheathed
+		Is_Fake_Firstperson() || ((playerActorState->GetWeaponState() == RE::WEAPON_STATE::kSheathed
 			? Settings::uDirectionalMovementSheathed
 			: Settings::uDirectionalMovementDrawn) == DirectionalMovementMode::kVanilla);
 

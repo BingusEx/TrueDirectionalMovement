@@ -10,6 +10,23 @@
 constexpr auto werewolfFormID = 0xCDD84;
 constexpr auto vampireLordFormID = 0x200283A;
 
+static inline bool Is_Fake_Firstperson() {
+	auto camera = RE::PlayerCamera::GetSingleton();
+	if (!camera) {
+		return false;
+	}
+
+	if (camera->IsInFirstPerson() || camera->IsInFreeCameraMode()) {
+		return false;
+	}
+
+	auto thirdPersonState = static_cast<RE::ThirdPersonState*>(camera->currentState.get());
+	if (thirdPersonState && thirdPersonState->currentZoomOffset == -0.275f) {
+		return true;
+	}
+	return false;
+}
+
 DirectionalMovementHandler* DirectionalMovementHandler::GetSingleton()
 {
 	static DirectionalMovementHandler singleton;
@@ -383,7 +400,12 @@ void DirectionalMovementHandler::UpdateFacingState()
 		currentAttackState = playerAttackState;
 	}
 
-	bool bShouldFaceCrosshairWhileMoving = (playerActorState->GetWeaponState() == RE::WEAPON_STATE::kSheathed ? Settings::uDirectionalMovementSheathed : Settings::uDirectionalMovementDrawn) == DirectionalMovementMode::kVanilla;
+	bool bShouldFaceCrosshairWhileMoving =
+		!Is_Fake_Firstperson() &&
+		((playerActorState->GetWeaponState() == RE::WEAPON_STATE::kSheathed
+			? Settings::uDirectionalMovementSheathed
+			: Settings::uDirectionalMovementDrawn) == DirectionalMovementMode::kVanilla);
+
 
 	if (bShouldFaceCrosshairWhileMoving && HasMovementInput() && !HasTargetLocked()) {
 		_bShouldFaceCrosshair = true;
@@ -1162,6 +1184,8 @@ void DirectionalMovementHandler::UpdateRotation(bool bForceInstant /*= false */)
 			if (submergeLevel > 0.18f) {
 				rotationSpeedMult *= 0.69f - submergeLevel + ((0.31f + submergeLevel) * Settings::fWaterRotationSpeedMult);
 			}
+
+			rotationSpeedMult *= GetAnimationSlowdown(playerCharacter);
 		}
 		
 		if (rotationSpeedMult <= 0.f) {
